@@ -1,0 +1,100 @@
+<html>
+  <head>
+    <title>Pendola TV</title>
+    <link rel="stylesheet" href="./bower_components/bootstrap/dist/css/bootstrap.min.css">
+    <!-- <link rel="stylesheet" href="./css/bootstrap-theme-darkly.css"> -->
+    <link rel="stylesheet" href="./css/bootstrap-theme-darkly.css">
+    <link rel="stylesheet" href="./css/index.css">
+    <script type="text/javascript" src="./bower_components/jquery-2.1.0.min/index.js"></script>
+    <script type="text/javascript" src="./bower_components/peerjs/peer.min.js"></script>
+
+    <!-- react js -->
+    <script src="./bower_components/react/react.js"></script>
+    <script src="./bower_components/react/react-dom.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-core/5.8.23/browser.js"></script>
+
+    <!-- my page scripts -->
+    <script type="text/javascript" src="./js/utils.js"></script>
+    <script type="text/babel" src="./js/index.js"></script>
+  </head>
+
+  <body>
+    <div id="alerts"> </div>
+
+    <div class="container">
+
+      <!-- 
+        the lobby view where you select if you want to host or join a lobby!
+      -->
+
+      <div class="app-view" id="view-lobby">
+
+        <div class="page-header">
+          <h1 id="page-header">Pendola TV <small id="page-subtitle">movies with friends</small></h1>
+        </div>
+
+
+        <!-- Enter your user name -->
+        <div class="input-group">
+          <span class="input-group-addon">USERNAME: </span>
+          <input id="input-username" type="text" class="form-control auto-validate" placeholder="Unique Username">
+        </div>
+
+        <br/>
+
+        <!-- host a lobby -->
+        <div class="panel panel-default">
+          <div class="panel-heading">HOST A LOBBY</div>
+          <div class="panel-body">
+            <div class="input-group">
+              <input id="input-movie-url" type="text" class="form-control auto-validate" placeholder="Movie URL">
+              <span class="input-group-btn">
+                <button id="btn-create-lobby" class="btn btn-primary" type="button">Create Lobby!</button>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- join a lobby -->
+        <div class="panel panel-default">
+          <div class="panel-heading">JOIN A LOBBY</div>
+          <div class="panel-body">
+            <div class="input-group">
+              <input id="input-lobby-host-id" type="text" class="form-control auto-validate" placeholder="Lobby Host ID">
+              <span class="input-group-btn">
+                <button id="btn-join-lobby" class="btn btn-primary" type="button">Join Lobby!</button>
+              </span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!--
+        player view where movies get played!
+      -->
+      <div class="app-view" id="view-player">
+        <div class="page-header">
+          <h1 id="page-header">Pendola TV <small id="page-subtitle">Media Player</small></h1>
+        </div>
+
+        <div class="panel panel-default"><div class="panel-body" id="player-info-panel"></div></div>
+
+        <!-- video playback panel -->
+        <div class="panel panel-default">
+          <div class="panel-heading">VIDEO PLAYER</div>
+          <div class="panel-body">
+            <video id="video-player" style="width: 100%; height: auto;"></video>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+      
+    
+
+  </body>
+
+</html>

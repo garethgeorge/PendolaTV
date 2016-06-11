@@ -1,0 +1,23 @@
+{
+  "name": "html-movies-with-friends",
+  "authors": [
+    "Gareth George <garethgeorge97@gmail.com>"
+  ],
+  "description": "watch movies with your friends over the internet!",
+  "main": "index.html",
+  "license": "MIT",
+  "homepage": "",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "peerjs": "^0.3.14",
+    "bootstrap": "^3.3.6",
+    "jquery-2.1.0.min": "http://code.jquery.com/jquery-2.1.0.min.js",
+    "react": "^15.1.0"
+  }
+}
