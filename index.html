@@ -16,6 +16,10 @@
     <!-- my page scripts -->
     <script type="text/javascript" src="./js/utils.js"></script>
     <script type="text/babel" src="./js/index.js"></script>
+
+    <!-- download jwplayer -->
+    <!-- <script type="text/javascript" src="http://p.jwpcdn.com/6/10/jwplayer.js"></script> -->
+
   </head>
 
   <body>
@@ -78,21 +82,36 @@
           <h1 id="page-header">Pendola TV <small id="page-subtitle">Media Player</small></h1>
         </div>
 
-        <div class="panel panel-default"><div class="panel-body" id="player-info-panel"></div></div>
-
         <!-- video playback panel -->
         <div class="panel panel-default">
-          <div class="panel-heading">VIDEO PLAYER</div>
+          <div class="panel-heading">VIDEO PLAYER: <em id="show-movie-path"></em></div>
           <div class="panel-body">
-            <video id="video-player" style="width: 100%; height: auto;"></video>
+            <video id="video-player" controls style="width: 100%; height: auto;" type=’video/x-matroska’ codecs=’theora, vorbis’></video>
           </div>
         </div>
 
+        <div class="panel panel-default" hidden><div class="panel-body" id="player-info-panel"></div></div>
+
+        <!--
+          chat box for us to talk
+        -->
+        <div id="chatbox">
+          <ul id="chat-messages" style="list-style-type: none"> </ul>
+          <div class="input-group" style="width: 100%">
+            <input id="input-chat-message" style="width: 100%;" type="text" class="form-control auto-validate" placeholder="Message...">
+          </div>
+        </div>
+
+        <div id="watchers-wrapper">
+          <strong>VIEWERS:</strong>
+          <ul id="watchers"> </ul>
+        </div>
+
+
       </div>
 
-    </div>
 
-      
+    </div>
     
 
   </body>

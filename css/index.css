@@ -13,3 +13,35 @@ body {
 	right: 5%;
 	opacity: 0.9;
 }
+
+#chatbox {
+	position: fixed;
+
+	left: 20%;
+	right: 20%;
+	bottom: 15px;
+	opacity: 0.9;
+}
+
+#input-chat-message {
+	opacity: 0.3;
+}
+
+#input-chat-message:focus {
+	opacity: 1.0;
+}
+
+#watchers-wrapper {
+	position: fixed;
+
+	left: 15px;
+	top: 20%;
+	bottom: 10%;
+	height: 100%;
+	width: 10%;
+	opacity: 0.5;
+}
+
+#watchers {
+	list-style-type:none;
+}

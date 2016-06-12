@@ -1,3 +1,5 @@
+// http://thelastpenguin.chernobog.bysh.me/media/Movies/Deadpool (2016)/Deadpool.mp4 
+
 var API_KEY = 'neia0qp3tocg14i';
 
 var app = {
@@ -40,7 +42,7 @@ var init = function() {
 	})
 
 	/*
-		add hooks
+		creating a server
 	*/
 	$("#btn-create-lobby").on('click', function() {
 		if ($("#input-movie-url").val().trim().length < 5) 
@@ -88,6 +90,15 @@ var init = function() {
 				});
 				
 				conn.on('data', function(data) {
+          console.log(data);
+          if (data.message == "chat" && data.message != undefined && data.name != undefined) {
+            app.chatPrint(data.name, data.text);
+            app.broadcast({
+              message: "chat",
+              name: data.name,
+              text: data.text
+            });
+          }
 				});
 			});
 
@@ -96,9 +107,26 @@ var init = function() {
       $("#video-player").on("seeking", syncVideoTime);
       $("#video-player").on("seeked", syncVideoTime);
 
+      // chat box
+      $("#input-chat-message").keypress(function(e) {
+        if (e.which == 13) {
+          app.broadcast({
+            message: "chat",
+            name: "host",
+            text: $(this).val(),
+          });
+          app.chatPrint("you", $(this).val());
+
+          $(this).val("");
+        }
+      });
+
 		});
 	});
 
+  /*
+    a client connecting!
+  */
 	$("#btn-join-lobby").on('click', function() {
 		if ($("#input-lobby-host-id").val().trim().length < 3) 
 			return alert("please enter a valid host name!");
@@ -140,9 +168,24 @@ var init = function() {
               vid.pause();
             else
               vid.play();
+          } else if (data.message == "chat") {
+            app.chatPrint(data.name, data.text);
           }
 				});
 			});
+
+      // chatbox
+      // chat box
+      $("#input-chat-message").keypress(function(e) {
+        if (e.which == 13) {
+          conn.send({
+            message: "chat",
+            name: app._peer.id,
+            text: $(this).val(),
+          });
+          $(this).val("");
+        }
+      });
 
 		});
 	});
@@ -258,37 +301,56 @@ app.showAlert = function showAlert(type, message, timeout) {
 	}, timeout);
 };
 
-var PlayerInfoPanel = React.createClass({
-  render: function() {
-    return (
-      <div>
-        <p>
-          <strong>HOSTNAME: </strong> {app._host} <br/> 
-          <strong>USERNAME: </strong> {app._peerid} <br/>
-          <strong>MOVIE PATH: </strong> {app._moviepath} <br/> 
-          <strong>USERS: </strong> {app._users.join(", ")}
-        </p>
-      </div>
-    );
+/*
+  CHAT BOX
+*/
+app.chatPrint = function(username, message) {
+  var messageBox = $("#chat-messages");
+  if (messageBox.children().length == 5)
+    messageBox.children().first().remove();
+
+  var div = $("<li/>");
+
+  if (username == "you") {
+    ReactDOM.render(
+      <em><strong>{username}: </strong> {message}</em>
+    , div.get(0));
+  } else {
+    ReactDOM.render(
+      <div><strong>{username}: </strong> {message}</div>
+    , div.get(0));
   }
-});
+  
+  setTimeout(function() {
+    div.fadeOut();
+  }, 5000);
 
+  messageBox.append(div);
+}
 
+/*
+  PLAYER INFORMATION VIEW
+*/ 
 
 views.player = {
 	display: function() {
-    views.player.infoPanel = ReactDOM.render(
-        <PlayerInfoPanel />
-      , document.getElementById('player-info-panel'));
+    if (app.mode == "host") {
+      $("#player-info-panel").show();
+    }
   },
 	update: function() {
-		views.player.infoPanel.forceUpdate();
+    $("#watchers").empty();
+    app._users.forEach(function(name) {
+      var div = $("<div/>");
+      div.text(name);
+      $("#watchers").append(div);
+    })
+    
 
     if (!views.player.videoLoaded && !!app._moviepath) {
-      views.player.viedoLoaded = true;
+      views.player.videoLoaded = true;
+      $("#show-movie-path").text(app._moviepath);
       $("#video-player").attr("src", app._moviepath);
-      if (app._mode === "host")
-        $("#video-player").attr("controls", "");
       $("#video-player").load();
     }
 	}
@@ -296,8 +358,7 @@ views.player = {
 
 $(function() {
   $("#input-username").val("");
-  $("#input-movie-url").val("http://techslides.com/demos/sample-videos/small.webm");
-  $("#input-lobby-host-id").val("server");
+  $("#input-movie-url").val("http://thelastpenguin.chernobog.bysh.me/media/");
 });
 
 
