@@ -18,6 +18,9 @@
     "peerjs": "^0.3.14",
     "bootstrap": "^3.3.6",
     "jquery-2.1.0.min": "http://code.jquery.com/jquery-2.1.0.min.js",
-    "react": "^15.1.0"
+    "react": "^15.1.0",
+    "async": "^1.5.2",
+    "eventEmitter": "^5.0.0",
+    "jwplayer": "6.12.4956"
   }
 }
