@@ -41,7 +41,8 @@
 
   <body>
 
-    <div id="video-player"></div>
+    <!-- <div id="video-player"></div> -->
+    <video id="video-player" controls> </video>
 
     <div class="container"> <!-- BEGIN CONTAINER -->
       
@@ -164,39 +165,6 @@
 
 
   });
-
-  /*
-  var canChangeState = true;
-  app.playbackSetState = function(state, position) {
-    if (!canChangeState)
-      return ;
-
-    canChangeState = false;
-
-    console.log("change state to... " + state);
-    if (state == 'playing')
-      app.player.play(true);
-    else if (state == 'paused')
-      app.player.pause(true);
-    if (position !== undefined && position !== null)
-      app.player.seek(position);
-  }
-
-  app.broadcastVideoState = function() {
-    console.log('broadcasting video state!');
-    if (!canChangeState)
-      return ;
-    canChangeState = false;
-    app.broadcast({
-      message: "video_state",
-      state: app.player.getState(),
-      position: app.player.getPostiion()
-    });
-    setTimeout(function() {
-      canChangeState = true;
-    }, 1000);
-  }
-  */
 
 
   /********************************************
@@ -381,7 +349,7 @@
                 if (data.message === "video_source") {
                   clearTimeout(timeout);
                   app.showAlertSuccess("You are watching " + data.url);
-                  app.startPlaying(data.url, data.position, data.state);
+                  app.startPlaying(data.url);
                   callback();
                 }
               });
@@ -409,6 +377,7 @@
   /*
     set the media
   */
+  /*
   var recentlyChanged = false;
 
   app.startPlaying = function(video) {
@@ -495,6 +464,71 @@
     app.video_source = null;
 
     $("#video-player").empty();
+  }
+  */
+
+  var recentlyChanged = false;
+
+  app.createStateMessage = function() {
+    return {
+      message: "state",
+      state: document.getElementById('video-player').paused ? 'paused' : 'playing',
+      position: document.getElementById('video-player').currentTime
+    };
+  }
+
+  app.broadcastState = function() {
+    app.broadcast(app.createStateMessage());
+  }
+
+  app.applyStateMessage = function(state) {
+    recentlyChanged = true;
+
+    console.log('state: ' + state);
+    if (state.state === "playing") {
+      document.getElementById('video-player').play();
+    } else if (state.state === "paused") {
+      document.getElementById('video-player').pause();
+    }
+
+    video.currentTime = state.position;
+  };
+
+
+  app.startPlaying = function(url) {
+    $("#video-player").show();
+    $("#video-player").attr("src", url);
+
+    $("#video-player").on("pause", function() {
+      app.broadcastState();
+    });
+
+    $("#video-player").on("play", function() {
+      app.broadcastState();
+    });
+
+    $("#video-player").on("seeked", function() {
+      app.broadcastState();
+    });
+
+    app.player.on("play", function() {
+      app.broadcastState();
+    });
+
+    app.player.on("seeked", function() {
+      app.broadcastState();
+    });
+
+    // $("#player").attr("src", app.video_source);
+    app.video_source = url;
+    app.ee.emit('start-playing-video', url);
+  }
+
+  app.stopPlaying = function() {
+    app.ee.emit('stop-playing-video', app.video_source);
+    app.video_source = null;
+
+    $("#video-player").hide();
   }
 
   app.getVideoSource = function() {
