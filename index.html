@@ -67,7 +67,7 @@
 
           <div class="col-sm-1">
             <button id="btn-start" class="btn btn-primary" style="width: 100%;">START</button>
-            <button id="btn-stop" class="btn btn-danger" style="width: 100%;">STOP</button>
+            <button id="btn-stop" class="btn btn-danger" style="width: 100%; display: none; ">STOP</button>
           </div>
 
         </div>
@@ -86,211 +86,135 @@
   </body>
 
   <script>
+  var app = {}
+
   $(function() {
   var minimum_name_length = 3;
   var API_KEY = 'neia0qp3tocg14i';
 
-  var app = {};
+  app.connections = {}
   app.ee = new EventEmitter();
-  app.user_name = null;
-  app.peer = null;
-  app.connections = {};
 
-  app.ee.on('my-peer-open', function(peer) {
-    peer.on('connection', function(conn) {
-      conn.on('open', function() {
-        app.ee.emit('connected-with', conn.peer, conn);
-        app.connections[conn.peer] = conn;
+  $("#btn-start").on('click', function() {
+      var myid = $("#input-username").val().trim();
+      if (myid.length < 3)
+        return app.showAlertDanger("Invalid username!");
+      app.myid = myid;
+      app.peer = new Peer(myid, {key: 'neia0qp3tocg14i'})
+
+      app.setInputsEnabled(false);
+
+      app.peer.on('open', function(id) {
+        app.showAlertInfo("Connected to peer network.");
+
+        // time to attempt to establish a connection to the peer
+        var mediasrc = $("#input-src-or-host").val().trim();
+        if (mediasrc.indexOf('https://') !== -1 || mediasrc.indexOf('http://') !== -1) {
+            app.amhost = true;
+            app.hostconn = null;
+            app.mediasrc = mediasrc;
+
+            app.peer.on('connection', function(conn) {
+              conn.on('open', function() {
+                app.connections[conn.peer] = conn;
+                app.showAlertInfo("Connected with " + conn.peer);
+                conn.send({
+                    message: "src",
+                    url: app.mediasrc
+                });
+                conn.send(app.createStateMessage());
+                conn.on('data', app.processPacket);
+              });
+              conn.on("disconnected", function(conn) {
+                delete app.connections[conn.peer];
+                app.showAlertDanger("Lost connection to " + conn.peer);
+              });
+            });
+
+            setInterval(function() {
+                app.broadcastState();
+            }, 3000);
+
+            app.startPlaying(app.mediasrc);
+        } else {
+            app.amhost = false;
+            app.hostconn = app.peer.connect(mediasrc);
+            app.mediasrc = null;
+            app.hostconn.on('open', function() {
+                app.hostconn.on('data', app.processPacket);
+                app.showAlertSuccess("Connected to host!");
+            });
+
+            app.hostconn.on('error', function(error) {
+                app.showAlertDanger(error);
+            });
+        }
       });
 
-      conn.on('disconnected', function() {
-        delete app.connections[conn.peer];
-        app.ee.emit('disconnected-from', conn.peer, conn);
+      app.peer.on('error', function(message) {
+          app.showAlertDanger("Connection error: " + message);
       });
-
-      conn.on('error', function(error) {
-        app.ee.showAlertDanger("error on connection with " + conn.peer + " message: " + error);
-        conn.disconnect();
-      });
-    });
   });
 
-  /*
-    HOOKS
-  */
-
-  app.ee.on('my-peer-open', function(peer) {
-    app.setInputsEnabled(false);
-    app.showAlertInfo("connected as " + peer.id);
-  });
-
-  app.ee.on('my-peer-disconnected', function(peer) {
-    app.showAlertDanger("disconnected from " + peer.id);
-    app.setInputsEnabled(true);
-  });
-
-  app.ee.on('connected-with', function(name, conn) {
-    // sync the video source with the clinet that just connected
-    console.log("video source: " + app.video_source);
-    if (app.video_source) {
-      console.log("sending video source packet!");
-      conn.send({
-        message: 'video_source',
-        url: app.video_source,
-      });
-      if (app.player)
-        conn.send(app.createStateMessage());
-    }
-
-    // show the success alert for connecting
-    app.showAlertSuccess('connected with ' + name);
-    conn.send({
-      message: 'lobby_members',
-      members: Object.keys(app.connections).filter(function(id) {
-        return app.connections[id].open;
-      })
-    });
-
-    // get the lobby member message!
-    conn.on('data', function(data) {
-      console.log(data);
-      if (data.message == 'lobby_members') {
-        data.members.forEach(function(name) {
-          if (!app.connections[name])
-            app.getConnectionTo(name, function() { });
-        });
-      } else if (data.message == 'state') {
-        app.applyStateMessage(data);
-      } else if (data.message == 'request_sync') {
-        conn.send(app.createStateMessage());
-      }
-    });
-
-
-  });
-
-
-  /********************************************
-   * UTILITY METHODS
-   ********************************************/
-
-  /*
-    disconnect from peer-js network
-  */
-  app.logout = function(callback) {
-    if (app.peer !== null) {
-      app.peer.on('disconnect', callback);
+  $("#btn-stop").on('click', function() {
       app.peer.destroy();
-      app.connections = {};
-    } else
-      return callback();
+
+      app.setInputsEnabled(true);
+  });
+
+  app.processPacket = function processPacket(packet) {
+      console.log(packet);
+      if (packet.message === "src") {
+          app.startPlaying(packet.url);
+      }
+      if (packet.message === "state") {
+          app.applyStateMessage(packet);
+      }
   }
 
-  /*
-    login to the peer-js network!
-  */
-  app.login = function(username, callback) {
-    if (app.peer)
-      return callback(new Error("peer already connected!"));
-    var peer = new Peer(username, {key: API_KEY});
-    app.peer = peer;
-    app.username = username;
-
-    var onOpen, onError;
-    onOpen = function() {
-      peer.removeListener('error', onError);
-      app.ee.emit('my-peer-open', peer);
-      callback();
+  app.createStateMessage = function() {
+    return {
+      message: "state",
+      state: document.getElementById('video-player').paused ? 'paused' : 'playing',
+      timeSent: (new Date()).getTime(),
+      position: document.getElementById('video-player').currentTime,
     };
-    onError = function(error) {
-      console.log(error);
-      return callback(error);
+  }
+
+  // var applyingStateMessage = false;
+  // var applyingStateMessageTimeout = null;
+
+  var receivedState = null;
+
+  app.applyStateMessage = function(state) {
+    var myState = app.createStateMessage();
+    if (state.state == myState.state && Math.abs(state.position - myState.position) < 0.5) return ;
+    receivedState = state;
+
+    if (state.state === "playing") {
+      document.getElementById('video-player').play();
+    } else if (state.state === "paused") {
+      document.getElementById('video-player').pause();
     }
 
-    peer.on('open', onOpen);
-    peer.on('error', onError);
+    var now = (new Date()).getTime();
+    document.getElementById('video-player').currentTime = (now - state.timeSent) / 1000.0 + state.position;
 
-    peer.on('disconnected', function() {
-      app.peer = null;
-      app.ee.emit('my-peer-disconnected', peer);
-    });
-  }
+    // clearTimeout(applyingStateMessage);
+    // applyingStateMessageTimeout = setTimeout(function() {
+    //     applyingStateMessage = false;
+    // }, 500);
+  };
 
-  /*
-    get connection to
-  */
-  app.getConnectionTo = function(id, callback) {
-    if (app.connections[id] !== undefined)
-      return callback(null, app.connections[id]);
+  app.broadcastState = function() {
+      var state = app.createStateMessage();
+      if (receivedState && state.state == receivedState.state && Math.abs(state.position - receivedState.position) < 0.5) return ;
 
-    var conn = app.peer.connect(id);
-
-    var error, open;
-    open = function() {
-      app.ee.emit('connected-with', id, conn);
-      app.connections[id] = conn;
-      callback(null, conn);
-      app.ee.removeListener(error);
-    };
-
-    error = function(error) {
-      var errorStr = '' + error;
-      if (errorStr != ('Error: Could not connect to peer ' + id))
-        return ;
-      console.log("error: " + error);
-      callback(error);
-      conn.close();
-    };
-
-    conn.on('open', open);
-    app.peer.on('error', error);
-
-    conn.on('disconnected', function() {
-      app.ee.emit('disconnected-from', id, conn);
-      delete app.connections[id];
-    });
-
-
-  }
-
-
-  /*
-    peer connection and disconnection
-  */
-
-  app.setupPeer = function(callback) {
-    app.showAlertInfo("connecting as " + app.user_name);
-    if (app.peer)
-      return callback(new Error("peer already connected!"));
-
-    var peer = new Peer(app.user_name, {key: API_KEY});
-    app.peer = peer;
-
-    peer.on("error", function(error) {
-      app.showAlertDanger(error);
-      peer.disconnect();
-      callback(error);
-    });
-
-    peer.on("open", function() {
-      app.showAlertInfo("peer connected successfully as " + app.user_name);
-      callback();
-
-      app.ee.call("my-peer-connected", peer);
-    })
-
-    peer.on("disconnected", function() {
-      callback("peerjs server disconnected");
-
-      app.ee.call("my-peer-disconnected", peer);
-    });
-  }
-
-  app.teardownPeer = function(callback) {
-    if (app.peer != null)
-      app.peer.disconnect();
-    app.peer.on("disconnected", callback);
-    app.peer = null;
+      if (app.amhost) {
+          app.broadcast(state);
+      } else {
+          app.hostconn.send(state);
+      }
   }
 
   app.broadcast = function(message) {
@@ -300,232 +224,28 @@
     });
   }
 
-
-  /********************************************
-   * UI INITIALIZATION
-   ********************************************/
-
-  $("#btn-stop").hide();
-  $("#video-player").hide();
-
-  $("#btn-stop").on('click', function() {
-    app.logout();
-    app.stopPlaying();
-  });
-
-  $("#btn-start").on('click', function() {
-    /*
-      reading user input
-    */
-    var user_name = $("#input-username").val().trim();
-    if (user_name.length < minimum_name_length)
-      return app.showAlertDanger("invalid username");
-
-    async.series([
-        app.logout,
-        function setupPeer(callback) {
-          app.login(user_name, function(error) {
-            if (error)
-              return callback(error);
-            return callback();
-          });
-        },
-
-        // retreive the video url and connect to the host
-        function findVideoSource(callback) {
-
-          app.video_source = null;
-
-          // set the input etc
-          var input2 = $("#input-src-or-host").val().trim();
-          if (input2.length < minimum_name_length)
-            return app.showAlertDanger("invalid host or media url");
-
-          if (input2.indexOf("http://") === -1 && input2.indexOf("https://") === -1) {
-            // connect to them and things and stuff
-            app.getConnectionTo(input2, function(error, conn) {
-              if (error)
-                return callback("Failed to connect: " + error);
-
-              // on video_source message set the app video source
-              var timeout;
-              conn.once("data", function(data) {
-                if (data.message === "video_source") {
-                  clearTimeout(timeout);
-                  app.showAlertSuccess("You are watching " + data.url);
-                  app.startPlaying(data.url);
-                  callback();
-                }
-              });
-
-              // wait 5 seconds for video_source message
-              timeout = setTimeout(function() {
-                callback(new Error("video source retreival timed out"));
-              }, 5000);
-
-              conn.send({
-                message: "request_sync"
-              });
-            });
-          } else {
-
-            app.startPlaying(input2, null);
-            callback();
-
-          }
-        }
-
-      ], function(error) {
-        if (error)
-          return app.showAlertDanger(error);
-        app.showAlertSuccess("no errors.");
-      })
-  });
-
-  /*
-    set the media
-  */
-  /*
-  var recentlyChanged = false;
-
-  app.startPlaying = function(video) {
-    app.player = jwplayer('video-player-real');
-    app.player.setup({
-      controlbar: 'bottom',
-      flashplayer: './bower_components/jwplayer/jwplayer.flash.swf',
-      width: "100%",
-      height: "100%",
-      file: url,
-      type: "mp4",
-    });
-  }
-
-  app.createStateMessage = function() {
-    return {
-      message: "state",
-      state: app.player.getState(),
-      position: app.player.getPosition()
-    };
-  }
-
-  app.broadcastState = function() {
-    if (recentlyChanged)
-      return ;
-    recentlyChanged = true;
-    app.broadcast(app.createStateMessage());
-    setTimeout(function() {
-      recentlyChanged = false;
-    }, 1000);
-  }
-
-  app.applyStateMessage = function(state) {
-    recentlyChanged = true;
-
-    console.log('state: ' + state);
-    if (state.state === "playing") {
-      app.player.play(true);
-    } else if (state.state === "paused") {
-      app.player.pause(true);
-    }
-
-    app.player.seek(state.position);
-    setTimeout(function() {
-      recentlyChanged = false;
-    }, 1000);
-  };
-
-
-  app.startPlaying = function(url, position, startPlaying) {
-
-    var child = $("<div id='video-player-real'></div>");
-    $("#video-player").append(child);
-
-    app.player = jwplayer('video-player-real');
-    app.player.setup({
-      controlbar: 'bottom',
-      flashplayer: './bower_components/jwplayer/jwplayer.flash.swf',
-      width: "100%",
-      height: "100%",
-      file: url,
-      type: "mp4",
-    });
-
-    app.player.on("pause", function() {
-      app.broadcastState();
-    });
-
-    app.player.on("play", function() {
-      app.broadcastState();
-    });
-
-    app.player.on("seeked", function() {
-      app.broadcastState();
-    });
-
-    // $("#player").attr("src", app.video_source);
-    app.video_source = url;
-    app.ee.emit('start-playing-video', url);
-  }
-
-  app.stopPlaying = function() {
-    app.ee.emit('stop-playing-video', app.video_source);
-    app.video_source = null;
-
-    $("#video-player").empty();
-  }
-  */
-
-  var recentlyChanged = false;
-
-  app.createStateMessage = function() {
-    return {
-      message: "state",
-      state: document.getElementById('video-player').paused ? 'paused' : 'playing',
-      position: document.getElementById('video-player').currentTime
-    };
-  }
-
-  app.broadcastState = function() {
-    if (recentlyChanged) return ;
-    app.broadcast(app.createStateMessage());
-  }
-
-  app.applyStateMessage = function(state) {
-    recentlyChanged = true;
-
-    if (state.state === "playing") {
-      document.getElementById('video-player').play();
-    } else if (state.state === "paused") {
-      document.getElementById('video-player').pause();
-    }
-
-    document.getElementById('video-player').currentTime = state.position;
-
-    // won't broadcast it's state changes for a little while
-    setTimeout(function() {
-      recentlyChanged = false;
-    }, 1000);
-  };
-
   app.startPlaying = function(url) {
     $("#video-player").show();
     $("#video-player").attr("src", url);
 
-    $("#video-player").on("pause", function() {
-      app.broadcastState();
-    });
+    app.showAlertInfo("Started playing " + url);
 
-    $("#video-player").on("play", function() {
-      app.broadcastState();
-    });
+    setTimeout(function() {
+        $("#video-player").on("pause", function() {
+          app.broadcastState();
+        });
 
-    $("#video-player").on("seeked", function() {
-      app.broadcastState();
-    });
+        $("#video-player").on("play", function() {
+          app.broadcastState();
+        });
 
-    // $("#player").attr("src", app.video_source);
-    app.video_source = url;
-    app.ee.emit('start-playing-video', url);
+        $("#video-player").on("seeked", function() {
+          app.broadcastState();
+        });
+
+        // $("#player").attr("src", app.video_source);
+        app.mediasrc = url;
+    }, 100);
   }
 
   app.stopPlaying = function() {
@@ -535,10 +255,7 @@
     $("#video-player").hide();
   }
 
-  app.getVideoSource = function() {
-    return app.video_source;
-  }
-
+  // update the UI
 
   app.setInputsEnabled = function(boolean) {
     if (boolean) {
@@ -552,6 +269,9 @@
     $("#input-src-or-host").attr("disabled", !boolean);
   }
 
+  /*
+    alert system
+  */
   app.showAlertDanger = function(message) {
     console.log("alert danger : " + message);
     var alert = $('<div class="alert alert-danger" role="alert">' +
@@ -606,6 +326,7 @@
     });
   }
 
+
   // make spacebar play and pause video
   $(document).keyup(function(evt) {
     if (evt.keyCode == 32) {
@@ -617,6 +338,7 @@
 
     }
   })
+
 
   });
   </script>
