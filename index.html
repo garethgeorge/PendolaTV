@@ -1,119 +1,624 @@
 <html>
+
   <head>
     <title>Pendola TV</title>
     <link rel="stylesheet" href="./bower_components/bootstrap/dist/css/bootstrap.min.css">
-    <!-- <link rel="stylesheet" href="./css/bootstrap-theme-darkly.css"> -->
     <link rel="stylesheet" href="./css/bootstrap-theme-darkly.css">
-    <link rel="stylesheet" href="./css/index.css">
-    <script type="text/javascript" src="./bower_components/jquery-2.1.0.min/index.js"></script>
+
     <script type="text/javascript" src="./bower_components/peerjs/peer.min.js"></script>
-
-    <!-- react js -->
-    <script src="./bower_components/react/react.js"></script>
-    <script src="./bower_components/react/react-dom.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-core/5.8.23/browser.js"></script>
-
-    <!-- my page scripts -->
-    <script type="text/javascript" src="./js/utils.js"></script>
-    <script type="text/babel" src="./js/index.js"></script>
-
-    <!-- download jwplayer -->
-    <!-- <script type="text/javascript" src="http://p.jwpcdn.com/6/10/jwplayer.js"></script> -->
-
+    <script type="text/javascript" src="./bower_components/async/dist/async.min.js"></script>
+    <script type="text/javascript" src="./bower_components/eventEmitter/EventEmitter.min.js"></script>
+    <script type="text/javascript" src="./bower_components/jquery-2.1.0.min/index.js"></script>
+    <!-- <script type="text/javascript" src="https://content.jwplatform.com/libraries/7k01Zcrs.js"></script> -->
   </head>
 
+  <style>
+    body {
+      left: 10px;
+      right: 10px;
+    }
+
+    #top-bar {
+      position: fixed;
+
+      top: 10px;
+      left: 5%;
+      right: 5%;
+    }
+
+    #video-player {
+      width: 100%;
+      height: 100%;
+    }
+
+    #error-messages {
+      position: fixed;
+      left: 10%;
+      right: 10%;
+      bottom: 15px;
+    }
+  </style>
+
   <body>
-    <div id="alerts"> </div>
 
-    <div class="container">
+    <!-- <div id="video-player"></div> -->
+    <video id="video-player" controls> </video>
 
-      <!-- 
-        the lobby view where you select if you want to host or join a lobby!
-      -->
+    <div class="container"> <!-- BEGIN CONTAINER -->
 
-      <div class="app-view" id="view-lobby">
+      <!-- top bar -->
+      <div id="top-bar">
 
-        <div class="page-header">
-          <h1 id="page-header">Pendola TV <small id="page-subtitle">movies with friends</small></h1>
-        </div>
+        <div class="row">
 
-
-        <!-- Enter your user name -->
-        <div class="input-group">
-          <span class="input-group-addon">USERNAME: </span>
-          <input id="input-username" type="text" class="form-control auto-validate" placeholder="Unique Username">
-        </div>
-
-        <br/>
-
-        <!-- host a lobby -->
-        <div class="panel panel-default">
-          <div class="panel-heading">HOST A LOBBY</div>
-          <div class="panel-body">
-            <div class="input-group">
-              <input id="input-movie-url" type="text" class="form-control auto-validate" placeholder="Movie URL">
-              <span class="input-group-btn">
-                <button id="btn-create-lobby" class="btn btn-primary" type="button">Create Lobby!</button>
-              </span>
+          <div class="col-sm-4">
+            <div class="input-group" style="width: 100%;">
+              <span class="input-group-addon">USERNAME</span>
+              <input id="input-username" type="text" class="form-control" placeholder="Username">
             </div>
           </div>
-        </div>
 
-        <!-- join a lobby -->
-        <div class="panel panel-default">
-          <div class="panel-heading">JOIN A LOBBY</div>
-          <div class="panel-body">
+          <div class="col-sm-6">
             <div class="input-group">
-              <input id="input-lobby-host-id" type="text" class="form-control auto-validate" placeholder="Lobby Host ID">
-              <span class="input-group-btn">
-                <button id="btn-join-lobby" class="btn btn-primary" type="button">Join Lobby!</button>
-              </span>
+              <span class="input-group-addon">@</span>
+              <input id="input-src-or-host" type="text" class="form-control" placeholder="Video Source or Lobby Leader">
             </div>
           </div>
+
+          <div class="col-sm-1">
+            <button id="btn-start" class="btn btn-primary" style="width: 100%;">START</button>
+            <button id="btn-stop" class="btn btn-danger" style="width: 100%;">STOP</button>
+          </div>
+
         </div>
 
       </div>
+      <!-- end top bar -->
 
-      <!--
-        player view where movies get played!
-      -->
-      <div class="app-view" id="view-player">
-        <div class="page-header">
-          <h1 id="page-header">Pendola TV <small id="page-subtitle">Media Player</small></h1>
-        </div>
-
-        <!-- video playback panel -->
-        <div class="panel panel-default">
-          <div class="panel-heading">VIDEO PLAYER: <em id="show-movie-path"></em></div>
-          <div class="panel-body">
-            <video id="video-player" controls style="width: 100%; height: auto;" type=’video/x-matroska’ codecs=’theora, vorbis’></video>
-          </div>
-        </div>
-
-        <div class="panel panel-default" hidden><div class="panel-body" id="player-info-panel"></div></div>
-
-        <!--
-          chat box for us to talk
-        -->
-        <div id="chatbox">
-          <ul id="chat-messages" style="list-style-type: none"> </ul>
-          <div class="input-group" style="width: 100%">
-            <input id="input-chat-message" style="width: 100%;" type="text" class="form-control auto-validate" placeholder="Message...">
-          </div>
-        </div>
-
-        <div id="watchers-wrapper">
-          <strong>VIEWERS:</strong>
-          <ul id="watchers"> </ul>
-        </div>
-
-
+      <!-- begin error messages -->
+      <div id="error-messages">
+      <ul style="list-style-type: none;"></ul>
       </div>
+      <!-- end error messages -->
 
-
-    </div>
-    
+    </div>  <!-- END CONTAINER -->
 
   </body>
+
+  <script>
+  $(function() {
+  var minimum_name_length = 3;
+  var API_KEY = 'neia0qp3tocg14i';
+
+  var app = {};
+  app.ee = new EventEmitter();
+  app.user_name = null;
+  app.peer = null;
+  app.connections = {};
+
+  app.ee.on('my-peer-open', function(peer) {
+    peer.on('connection', function(conn) {
+      conn.on('open', function() {
+        app.ee.emit('connected-with', conn.peer, conn);
+        app.connections[conn.peer] = conn;
+      });
+
+      conn.on('disconnected', function() {
+        delete app.connections[conn.peer];
+        app.ee.emit('disconnected-from', conn.peer, conn);
+      });
+
+      conn.on('error', function(error) {
+        app.ee.showAlertDanger("error on connection with " + conn.peer + " message: " + error);
+        conn.disconnect();
+      });
+    });
+  });
+
+  /*
+    HOOKS
+  */
+
+  app.ee.on('my-peer-open', function(peer) {
+    app.setInputsEnabled(false);
+    app.showAlertInfo("connected as " + peer.id);
+  });
+
+  app.ee.on('my-peer-disconnected', function(peer) {
+    app.showAlertDanger("disconnected from " + peer.id);
+    app.setInputsEnabled(true);
+  });
+
+  app.ee.on('connected-with', function(name, conn) {
+    // sync the video source with the clinet that just connected
+    console.log("video source: " + app.video_source);
+    if (app.video_source) {
+      console.log("sending video source packet!");
+      conn.send({
+        message: 'video_source',
+        url: app.video_source,
+      });
+      if (app.player)
+        conn.send(app.createStateMessage());
+    }
+
+    // show the success alert for connecting
+    app.showAlertSuccess('connected with ' + name);
+    conn.send({
+      message: 'lobby_members',
+      members: Object.keys(app.connections).filter(function(id) {
+        return app.connections[id].open;
+      })
+    });
+
+    // get the lobby member message!
+    conn.on('data', function(data) {
+      console.log(data);
+      if (data.message == 'lobby_members') {
+        data.members.forEach(function(name) {
+          if (!app.connections[name])
+            app.getConnectionTo(name, function() { });
+        });
+      } else if (data.message == 'state') {
+        app.applyStateMessage(data);
+      } else if (data.message == 'request_sync') {
+        conn.send(app.createStateMessage());
+      }
+    });
+
+
+  });
+
+
+  /********************************************
+   * UTILITY METHODS
+   ********************************************/
+
+  /*
+    disconnect from peer-js network
+  */
+  app.logout = function(callback) {
+    if (app.peer !== null) {
+      app.peer.on('disconnect', callback);
+      app.peer.destroy();
+      app.connections = {};
+    } else
+      return callback();
+  }
+
+  /*
+    login to the peer-js network!
+  */
+  app.login = function(username, callback) {
+    if (app.peer)
+      return callback(new Error("peer already connected!"));
+    var peer = new Peer(username, {key: API_KEY});
+    app.peer = peer;
+    app.username = username;
+
+    var onOpen, onError;
+    onOpen = function() {
+      peer.removeListener('error', onError);
+      app.ee.emit('my-peer-open', peer);
+      callback();
+    };
+    onError = function(error) {
+      console.log(error);
+      return callback(error);
+    }
+
+    peer.on('open', onOpen);
+    peer.on('error', onError);
+
+    peer.on('disconnected', function() {
+      app.peer = null;
+      app.ee.emit('my-peer-disconnected', peer);
+    });
+  }
+
+  /*
+    get connection to
+  */
+  app.getConnectionTo = function(id, callback) {
+    if (app.connections[id] !== undefined)
+      return callback(null, app.connections[id]);
+
+    var conn = app.peer.connect(id);
+
+    var error, open;
+    open = function() {
+      app.ee.emit('connected-with', id, conn);
+      app.connections[id] = conn;
+      callback(null, conn);
+      app.ee.removeListener(error);
+    };
+
+    error = function(error) {
+      var errorStr = '' + error;
+      if (errorStr != ('Error: Could not connect to peer ' + id))
+        return ;
+      console.log("error: " + error);
+      callback(error);
+      conn.close();
+    };
+
+    conn.on('open', open);
+    app.peer.on('error', error);
+
+    conn.on('disconnected', function() {
+      app.ee.emit('disconnected-from', id, conn);
+      delete app.connections[id];
+    });
+
+
+  }
+
+
+  /*
+    peer connection and disconnection
+  */
+
+  app.setupPeer = function(callback) {
+    app.showAlertInfo("connecting as " + app.user_name);
+    if (app.peer)
+      return callback(new Error("peer already connected!"));
+
+    var peer = new Peer(app.user_name, {key: API_KEY});
+    app.peer = peer;
+
+    peer.on("error", function(error) {
+      app.showAlertDanger(error);
+      peer.disconnect();
+      callback(error);
+    });
+
+    peer.on("open", function() {
+      app.showAlertInfo("peer connected successfully as " + app.user_name);
+      callback();
+
+      app.ee.call("my-peer-connected", peer);
+    })
+
+    peer.on("disconnected", function() {
+      callback("peerjs server disconnected");
+
+      app.ee.call("my-peer-disconnected", peer);
+    });
+  }
+
+  app.teardownPeer = function(callback) {
+    if (app.peer != null)
+      app.peer.disconnect();
+    app.peer.on("disconnected", callback);
+    app.peer = null;
+  }
+
+  app.broadcast = function(message) {
+    Object.keys(app.connections).forEach(function(id) {
+      var conn = app.connections[id];
+      conn.send(message);
+    });
+  }
+
+
+  /********************************************
+   * UI INITIALIZATION
+   ********************************************/
+
+  $("#btn-stop").hide();
+  $("#video-player").hide();
+
+  $("#btn-stop").on('click', function() {
+    app.logout();
+    app.stopPlaying();
+  });
+
+  $("#btn-start").on('click', function() {
+    /*
+      reading user input
+    */
+    var user_name = $("#input-username").val().trim();
+    if (user_name.length < minimum_name_length)
+      return app.showAlertDanger("invalid username");
+
+    async.series([
+        app.logout,
+        function setupPeer(callback) {
+          app.login(user_name, function(error) {
+            if (error)
+              return callback(error);
+            return callback();
+          });
+        },
+
+        // retreive the video url and connect to the host
+        function findVideoSource(callback) {
+
+          app.video_source = null;
+
+          // set the input etc
+          var input2 = $("#input-src-or-host").val().trim();
+          if (input2.length < minimum_name_length)
+            return app.showAlertDanger("invalid host or media url");
+
+          if (input2.indexOf("http://") === -1 && input2.indexOf("https://") === -1) {
+            // connect to them and things and stuff
+            app.getConnectionTo(input2, function(error, conn) {
+              if (error)
+                return callback("Failed to connect: " + error);
+
+              // on video_source message set the app video source
+              var timeout;
+              conn.once("data", function(data) {
+                if (data.message === "video_source") {
+                  clearTimeout(timeout);
+                  app.showAlertSuccess("You are watching " + data.url);
+                  app.startPlaying(data.url);
+                  callback();
+                }
+              });
+
+              // wait 5 seconds for video_source message
+              timeout = setTimeout(function() {
+                callback(new Error("video source retreival timed out"));
+              }, 5000);
+
+              conn.send({
+                message: "request_sync"
+              });
+            });
+          } else {
+
+            app.startPlaying(input2, null);
+            callback();
+
+          }
+        }
+
+      ], function(error) {
+        if (error)
+          return app.showAlertDanger(error);
+        app.showAlertSuccess("no errors.");
+      })
+  });
+
+  /*
+    set the media
+  */
+  /*
+  var recentlyChanged = false;
+
+  app.startPlaying = function(video) {
+    app.player = jwplayer('video-player-real');
+    app.player.setup({
+      controlbar: 'bottom',
+      flashplayer: './bower_components/jwplayer/jwplayer.flash.swf',
+      width: "100%",
+      height: "100%",
+      file: url,
+      type: "mp4",
+    });
+  }
+
+  app.createStateMessage = function() {
+    return {
+      message: "state",
+      state: app.player.getState(),
+      position: app.player.getPosition()
+    };
+  }
+
+  app.broadcastState = function() {
+    if (recentlyChanged)
+      return ;
+    recentlyChanged = true;
+    app.broadcast(app.createStateMessage());
+    setTimeout(function() {
+      recentlyChanged = false;
+    }, 1000);
+  }
+
+  app.applyStateMessage = function(state) {
+    recentlyChanged = true;
+
+    console.log('state: ' + state);
+    if (state.state === "playing") {
+      app.player.play(true);
+    } else if (state.state === "paused") {
+      app.player.pause(true);
+    }
+
+    app.player.seek(state.position);
+    setTimeout(function() {
+      recentlyChanged = false;
+    }, 1000);
+  };
+
+
+  app.startPlaying = function(url, position, startPlaying) {
+
+    var child = $("<div id='video-player-real'></div>");
+    $("#video-player").append(child);
+
+    app.player = jwplayer('video-player-real');
+    app.player.setup({
+      controlbar: 'bottom',
+      flashplayer: './bower_components/jwplayer/jwplayer.flash.swf',
+      width: "100%",
+      height: "100%",
+      file: url,
+      type: "mp4",
+    });
+
+    app.player.on("pause", function() {
+      app.broadcastState();
+    });
+
+    app.player.on("play", function() {
+      app.broadcastState();
+    });
+
+    app.player.on("seeked", function() {
+      app.broadcastState();
+    });
+
+    // $("#player").attr("src", app.video_source);
+    app.video_source = url;
+    app.ee.emit('start-playing-video', url);
+  }
+
+  app.stopPlaying = function() {
+    app.ee.emit('stop-playing-video', app.video_source);
+    app.video_source = null;
+
+    $("#video-player").empty();
+  }
+  */
+
+  var recentlyChanged = false;
+
+  app.createStateMessage = function() {
+    return {
+      message: "state",
+      state: document.getElementById('video-player').paused ? 'paused' : 'playing',
+      position: document.getElementById('video-player').currentTime
+    };
+  }
+
+  app.broadcastState = function() {
+    if (recentlyChanged) return ;
+    app.broadcast(app.createStateMessage());
+  }
+
+  app.applyStateMessage = function(state) {
+    recentlyChanged = true;
+
+    if (state.state === "playing") {
+      document.getElementById('video-player').play();
+    } else if (state.state === "paused") {
+      document.getElementById('video-player').pause();
+    }
+
+    document.getElementById('video-player').currentTime = state.position;
+
+    // won't broadcast it's state changes for a little while
+    setTimeout(function() {
+      recentlyChanged = false;
+    }, 1000);
+  };
+
+  app.startPlaying = function(url) {
+    $("#video-player").show();
+    $("#video-player").attr("src", url);
+
+    $("#video-player").on("pause", function() {
+      app.broadcastState();
+    });
+
+    $("#video-player").on("play", function() {
+      app.broadcastState();
+    });
+
+    $("#video-player").on("seeked", function() {
+      app.broadcastState();
+    });
+
+    // $("#player").attr("src", app.video_source);
+    app.video_source = url;
+    app.ee.emit('start-playing-video', url);
+  }
+
+  app.stopPlaying = function() {
+    app.ee.emit('stop-playing-video', app.video_source);
+    app.video_source = null;
+
+    $("#video-player").hide();
+  }
+
+  app.getVideoSource = function() {
+    return app.video_source;
+  }
+
+
+  app.setInputsEnabled = function(boolean) {
+    if (boolean) {
+      $("#btn-stop").hide()
+      $("#btn-start").show();
+    } else {
+      $("#btn-stop").show()
+      $("#btn-start").hide();
+    }
+    $("#input-username").attr("disabled", !boolean);
+    $("#input-src-or-host").attr("disabled", !boolean);
+  }
+
+  app.showAlertDanger = function(message) {
+    console.log("alert danger : " + message);
+    var alert = $('<div class="alert alert-danger" role="alert">' +
+    '  <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>' +
+    '  <span class="sr-only">Error:</span>' +
+    message +
+    '</div>');
+    $("#error-messages").append(alert);
+
+    setTimeout(function() {
+      alert.fadeOut();
+    }, 7500);
+
+    alert.on('click', function() {
+      alert.remove();
+    });
+  }
+
+  app.showAlertSuccess = function(message) {
+    console.log("alert success : " + message);
+    var alert = $('<div class="alert alert-success" role="alert">' +
+    '  <span class="glyphicon glyphicon-ok" aria-hidden="true"></span>' +
+    '  <span class="sr-only">Success:</span>' +
+    message +
+    '</div>');
+    $("#error-messages").append(alert);
+
+    setTimeout(function() {
+      alert.fadeOut();
+    }, 7500);
+
+    alert.on('click', function() {
+      alert.remove();
+    });
+  }
+
+  app.showAlertInfo = function(message) {
+    console.log("alert info : " + message);
+    var alert = $('<div class="alert alert-info" role="alert">' +
+    '  <span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span>' +
+    '  <span class="sr-only">Info:</span>' +
+    message +
+    '</div>');
+    $("#error-messages").append(alert);
+
+    setTimeout(function() {
+      alert.fadeOut();
+    }, 7500);
+
+    alert.on('click', function() {
+      alert.remove();
+    });
+  }
+
+  // make spacebar play and pause video
+  $(document).keyup(function(evt) {
+    if (evt.keyCode == 32) {
+      if ($("#video-player").get().paused) {
+        $("#video-player").get().play();
+      } else {
+        $("#video-player").get().pause();
+      }
+
+    }
+  })
+
+  });
+  </script>
 
 </html>
